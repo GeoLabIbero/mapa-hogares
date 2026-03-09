@@ -358,7 +358,7 @@ function claseNivel(nivel) {
 // ─── ICONOS HOGARES ──────────────────────────────────────────────────
 const iconNormal = () => L.divIcon({
   className: '',
-  html: `<div style="width:9px;height:9px;border-radius:50%;background:#16a34a;border:2px solid #14532d;box-shadow:0 0 6px rgba(22,163,74,0.6);cursor:pointer;"></div>`,
+  html: `<div style="width:5px;height:5px;border-radius:50%;background:#16a34a;border:2px solid #14532d;box-shadow:0 0 6px rgba(22,163,74,0.6);cursor:pointer;"></div>`,
   iconSize: [9, 9], iconAnchor: [4, 4],
 });
 
@@ -439,7 +439,7 @@ Papa.parse('Clinicas.csv', {
         fillColor: color,
         color: color,
         weight: 1.5,
-        fillOpacity: 0.85,
+        fillOpacity: 0.5,
       }).bindPopup(`
         <div class="popup-title" style="color:${color}">Clínica</div>
         <div style="font-size:0.72rem;margin:4px 0;">Nivel: <strong>${c.nivel}</strong></div>
@@ -488,7 +488,7 @@ Papa.parse('escuelas.csv', {
         fillColor: '#38bdf8',
         color: '#0284c7',
         weight: 1.5,
-        fillOpacity: 0.85,
+        fillOpacity: 0.5,
       }).bindPopup(`
         <div class="popup-title" style="color:#38bdf8">Escuela</div>
         <div style="font-size:0.72rem;margin:4px 0;">Nivel: <strong>${e.nivel}</strong></div>
@@ -524,12 +524,12 @@ Papa.parse('oxxos.csv', {
     OXXOS.forEach(o => {
       const m = L.circleMarker([o.lat, o.lng], {
         radius: 3,
-        fillColor: '#f97316',
+        fillColor: '#d22e2e',
         color: '#d22e2e',
         weight: 1.5,
-        fillOpacity: 0.9,
+        fillOpacity: 0.5,
       }).bindPopup(`
-        <div class="popup-title" style="color:#f97316">Oxxo</div>
+        <div class="popup-title" style="color:#d22e2e">Oxxo</div>
         <div class="popup-sub">${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}</div>
       `);
       oxxoLayerGroup.addLayer(m);
