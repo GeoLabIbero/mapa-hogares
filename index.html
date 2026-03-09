@@ -435,7 +435,7 @@ Papa.parse('Clinicas.csv', {
     CLINICAS.forEach(c => {
       const color = colorNivel(c.nivel);
       const m = L.circleMarker([c.lat, c.lng], {
-        radius: 6,
+        radius: 3,
         fillColor: color,
         color: color,
         weight: 1.5,
@@ -484,7 +484,7 @@ Papa.parse('escuelas.csv', {
 
     ESCUELAS.forEach(e => {
       const m = L.circleMarker([e.lat, e.lng], {
-        radius: 5,
+        radius: 3,
         fillColor: '#38bdf8',
         color: '#0284c7',
         weight: 1.5,
@@ -523,9 +523,9 @@ Papa.parse('oxxos.csv', {
 
     OXXOS.forEach(o => {
       const m = L.circleMarker([o.lat, o.lng], {
-        radius: 5,
+        radius: 3,
         fillColor: '#f97316',
-        color: '#ea580c',
+        color: '#d22e2e',
         weight: 1.5,
         fillOpacity: 0.9,
       }).bindPopup(`
