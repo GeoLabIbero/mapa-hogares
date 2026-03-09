@@ -440,6 +440,7 @@ Papa.parse('Clinicas.csv', {
         color: color,
         weight: 1.5,
         fillOpacity: 0.5,
+        opacity:0.5,
       }).bindPopup(`
         <div class="popup-title" style="color:${color}">Clínica</div>
         <div style="font-size:0.72rem;margin:4px 0;">Nivel: <strong>${c.nivel}</strong></div>
@@ -489,6 +490,7 @@ Papa.parse('escuelas.csv', {
         color: '#0284c7',
         weight: 1.5,
         fillOpacity: 0.5,
+        opacity:0.5,
       }).bindPopup(`
         <div class="popup-title" style="color:#38bdf8">Escuela</div>
         <div style="font-size:0.72rem;margin:4px 0;">Nivel: <strong>${e.nivel}</strong></div>
@@ -528,6 +530,7 @@ Papa.parse('oxxos.csv', {
         color: '#d22e2e',
         weight: 1.5,
         fillOpacity: 0.5,
+        opacity:0.5,
       }).bindPopup(`
         <div class="popup-title" style="color:#d22e2e">Oxxo</div>
         <div class="popup-sub">${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}</div>
