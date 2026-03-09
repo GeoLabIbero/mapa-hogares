@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa Hogares</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: #f8f9fa;
+      color: #1a1d26;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid #e2e5ed;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #1a1d26;
+    }
+
+    header h1 span { color: #16a34a; }
+
+    .tag {
+      font-size: 0.65rem;
+      background: #f1f5f9;
+      border: 1px solid #e2e5ed;
+      color: #64748b;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    .panel {
+      width: 280px;
+      background: #ffffff;
+      border-right: 1px solid #e2e5ed;
+      display: flex;
+      flex-direction: column;
+      z-index: 500;
+      overflow-y: auto;
+    }
+
+    .panel-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .panel-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    .slider-val {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.6rem;
+      color: #16a34a;
+    }
+
+    .slider-unit { font-size: 0.65rem; color: #94a3b8; }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: #e2e5ed;
+      border-radius: 2px;
+      outline: none;
+      margin-top: 8px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #16a34a;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(22,163,74,0.4);
+    }
+
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid #e2e5ed;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: #16a34a;
+      line-height: 1;
+    }
+
+    .stat-lbl {
+      font-size: 0.6rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.7rem;
+      color: #475569;
+    }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .layer-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.7rem;
+      color: #475569;
+    }
+
+    .toggle-btn {
+      width: 32px; height: 16px;
+      background: #cbd5e1;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+      border: none;
+      outline: none;
+    }
+
+    .toggle-btn.on { background: #16a34a; }
+
+    .toggle-btn::after {
+      content: '';
+      position: absolute;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      top: 2px; left: 2px;
+      transition: left 0.2s;
+    }
+
+    .toggle-btn.on::after { left: 18px; }
+
+    .item-list { display: flex; flex-direction: column; gap: 5px; }
+
+    .list-item {
+      background: #f8fafc;
+      border-left: 3px solid #16a34a;
+      border-radius: 4px;
+      padding: 7px 10px;
+      font-size: 0.67rem;
+      color: #8b8fa8;
+    }
+
+    .list-item.clinica-1 { border-color: #f87171; }
+    .list-item.clinica-2 { border-color: #fb923c; }
+    .list-item.clinica-3 { border-color: #facc15; }
+    .list-item.clinica-otro { border-color: #a78bfa; }
+
+    .list-item .item-name { color: #1a1d26; font-size: 0.7rem; margin-bottom: 2px; }
+    .list-item .item-sub { color: #94a3b8; font-size: 0.62rem; }
+
+    .empty-state {
+      text-align: center;
+      padding: 20px 16px;
+      color: #cbd5e1;
+      font-size: 0.72rem;
+      line-height: 2;
+    }
+
+    #map { flex: 1; }
+
+    .leaflet-popup-content-wrapper {
+      background: #ffffff;
+      border: 1px solid #e2e5ed;
+      color: #1a1d26;
+      border-radius: 8px;
+      font-family: 'DM Mono', monospace;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    .leaflet-popup-tip { background: #ffffff; }
+    .leaflet-popup-content { font-size: 0.75rem; line-height: 1.7; min-width: 160px; }
+
+    .popup-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #16a34a;
+      margin-bottom: 2px;
+    }
+
+    .popup-sub { color: #94a3b8; font-size: 0.65rem; }
+    .popup-hint { color: #16a34a; font-size: 0.62rem; margin-top: 6px; opacity: 0.8; }
+
+    .leaflet-control-zoom a {
+      background: #ffffff !important;
+      color: #475569 !important;
+      border-color: #e2e5ed !important;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background: #f1f5f9 !important;
+      color: #1a1d26 !important;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Mapa <span>Hogares</span></h1>
+  <span class="tag" id="totalTag">Cargando...</span>
+  <span class="tag" id="clinicasTag">Cargando clínicas...</span>
+</header>
+
+<div class="main">
+  <div class="panel">
+
+    <div class="panel-section">
+      <div class="panel-label">Radio del Buffer</div>
+      <div class="slider-val" id="bufferVal">500</div>
+      <div class="slider-unit">metros</div>
+      <input type="range" id="bufferSlider" min="100" max="2000" step="50" value="500">
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Capas visibles</div>
+      <div class="layer-toggle">
+        <span>● Hogares</span>
+        <button class="toggle-btn on" id="toggleHogares"></button>
+      </div>
+      <div class="layer-toggle">
+        <span>● Clínicas</span>
+        <button class="toggle-btn on" id="toggleClinicas"></button>
+      </div>
+      <div class="layer-toggle">
+        <span>● Escuelas</span>
+        <button class="toggle-btn on" id="toggleEscuelas"></button>
+      </div>
+      <div class="layer-toggle">
+        <span>● Oxxos</span>
+        <button class="toggle-btn on" id="toggleOxxos"></button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Leyenda — Nivel de Atención</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Nivel 1</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>Nivel 2</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#facc15"></div>Nivel 3</div>
+      <div class="legend-item" style="margin-top:6px;"><div class="legend-dot" style="background:#38bdf8"></div>Escuelas</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Oxxos</div>
+      <div class="legend-item" style="margin-top:6px;"><div class="legend-dot" style="background:#4ade80"></div>Hogares</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Hogar seleccionado</div>
+      <div id="selectedInfo" class="empty-state">
+        Haz clic en un<br>hogar para activar<br>el buffer
+      </div>
+    </div>
+
+    <div class="panel-section" style="flex:1">
+      <div class="panel-label">Dentro del buffer</div>
+      <div id="bufferResults">
+        <div class="empty-state">–</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<script>
+let HOGARES = [];
+let CLINICAS = [];
+let bufferLayer = null;
+let selectedHogar = null;
+let lastMarker = null;
+let bufferRadio = 500;
+const hogarMarkers = {};
+const hogarLayerGroup = L.layerGroup();
+const escuelaLayerGroup = L.layerGroup();
+let ESCUELAS = [];
+let OXXOS = [];
+const oxxoLayerGroup = L.layerGroup();
+const clinicaLayerGroup = L.layerGroup();
+
+// ─── MAPA ────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [19.4, -99.1], zoom: 11 });
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  maxZoom: 19,
+}).addTo(map);
+
+hogarLayerGroup.addTo(map);
+escuelaLayerGroup.addTo(map);
+oxxoLayerGroup.addTo(map);
+clinicaLayerGroup.addTo(map);
+
+// ─── COLOR POR NIVEL ─────────────────────────────────────────────────
+function colorNivel(nivel) {
+  const n = String(nivel).trim().toLowerCase();
+  if (n === '1' || n.includes('primer')) return '#f87171';
+  if (n === '2' || n.includes('segundo')) return '#fb923c';
+  if (n === '3' || n.includes('tercer')) return '#facc15';
+  return '#a78bfa';
+}
+
+function claseNivel(nivel) {
+  const n = String(nivel).trim().toLowerCase();
+  if (n === '1' || n.includes('primer')) return 'clinica-1';
+  if (n === '2' || n.includes('segundo')) return 'clinica-2';
+  if (n === '3' || n.includes('tercer')) return 'clinica-3';
+  return 'clinica-otro';
+}
+
+// ─── ICONOS HOGARES ──────────────────────────────────────────────────
+const iconNormal = () => L.divIcon({
+  className: '',
+  html: `<div style="width:9px;height:9px;border-radius:50%;background:#16a34a;border:2px solid #14532d;box-shadow:0 0 6px rgba(22,163,74,0.6);cursor:pointer;"></div>`,
+  iconSize: [9, 9], iconAnchor: [4, 4],
+});
+
+const iconSelected = () => L.divIcon({
+  className: '',
+  html: `<div style="width:16px;height:16px;border-radius:50%;background:#16a34a;border:3px solid #fff;box-shadow:0 0 20px rgba(22,163,74,0.8);cursor:pointer;"></div>`,
+  iconSize: [16, 16], iconAnchor: [8, 8],
+});
+
+// ─── CARGA HOGARES ───────────────────────────────────────────────────
+Papa.parse('hogares.csv', {
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  complete: function(results) {
+    HOGARES = results.data
+      .map((row, i) => ({
+        id: row['id'] ? row['id'].trim() : String(i + 1),
+        lat: parseFloat(row['lat_dec']),
+        lng: parseFloat(row['lng_dec']),
+      }))
+      .filter(h => !isNaN(h.lat) && !isNaN(h.lng));
+
+    document.getElementById('totalTag').textContent = `${HOGARES.length} hogares`;
+
+    if (HOGARES.length > 0) {
+      const lats = HOGARES.map(h => h.lat);
+      const lngs = HOGARES.map(h => h.lng);
+      map.fitBounds([
+        [Math.min(...lats), Math.min(...lngs)],
+        [Math.max(...lats), Math.max(...lngs)]
+      ], { padding: [40, 40] });
+    }
+
+    HOGARES.forEach(h => {
+      const m = L.marker([h.lat, h.lng], { icon: iconNormal() })
+        .bindPopup(`
+          <div class="popup-title">ID: ${h.id}</div>
+          <div class="popup-sub">${h.lat.toFixed(5)}, ${h.lng.toFixed(5)}</div>
+          <div class="popup-hint">▶ Clic para activar buffer</div>
+        `);
+      m.on('click', () => seleccionarHogar(h, m));
+      hogarLayerGroup.addLayer(m);
+      hogarMarkers[h.id] = m;
+    });
+  },
+  error: function() {
+    document.getElementById('totalTag').textContent = '⚠ hogares.csv no encontrado';
+  }
+});
+
+// ─── CARGA CLÍNICAS ──────────────────────────────────────────────────
+Papa.parse('Clinicas.csv', {
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  complete: function(results) {
+    CLINICAS = results.data
+      .map((row, i) => {
+        // Buscar columna NIVEL ATENCION con distintas variantes
+        const nivel = row['NIVEL ATENCION'] || row['NIVEL_ATENCION'] ||
+                      row['nivel atencion'] || row['nivel_atencion'] || 'N/D';
+        return {
+          id: i + 1,
+          lat: parseFloat(row['LATITUD']),
+          lng: parseFloat(row['LONGITUD']),
+          nivel: nivel.trim(),
+        };
+      })
+      .filter(c => !isNaN(c.lat) && !isNaN(c.lng));
+
+    document.getElementById('clinicasTag').textContent = `${CLINICAS.length} clínicas`;
+
+    CLINICAS.forEach(c => {
+      const color = colorNivel(c.nivel);
+      const m = L.circleMarker([c.lat, c.lng], {
+        radius: 6,
+        fillColor: color,
+        color: color,
+        weight: 1.5,
+        fillOpacity: 0.85,
+      }).bindPopup(`
+        <div class="popup-title" style="color:${color}">Clínica</div>
+        <div style="font-size:0.72rem;margin:4px 0;">Nivel: <strong>${c.nivel}</strong></div>
+        <div class="popup-sub">${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}</div>
+      `);
+      clinicaLayerGroup.addLayer(m);
+    });
+  },
+  error: function() {
+    document.getElementById('clinicasTag').textContent = '⚠ Clinicas.csv no encontrado';
+  }
+});
+
+// ─── TOGGLE CAPAS ────────────────────────────────────────────────────
+document.getElementById('toggleHogares').addEventListener('click', function() {
+  this.classList.toggle('on');
+  if (this.classList.contains('on')) map.addLayer(hogarLayerGroup);
+  else map.removeLayer(hogarLayerGroup);
+});
+
+document.getElementById('toggleClinicas').addEventListener('click', function() {
+  this.classList.toggle('on');
+  if (this.classList.contains('on')) map.addLayer(clinicaLayerGroup);
+  else map.removeLayer(clinicaLayerGroup);
+});
+
+
+// ─── CARGA CSV ESCUELAS ──────────────────────────────────────────────
+Papa.parse('escuelas.csv', {
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  complete: function(results) {
+    ESCUELAS = results.data
+      .map((row, i) => ({
+        id: i + 1,
+        lat: parseFloat(row['lat']),
+        lng: parseFloat(row['lng']),
+        nivel: row['nivel'] || 'N/D',
+      }))
+      .filter(e => !isNaN(e.lat) && !isNaN(e.lng));
+
+    ESCUELAS.forEach(e => {
+      const m = L.circleMarker([e.lat, e.lng], {
+        radius: 5,
+        fillColor: '#38bdf8',
+        color: '#0284c7',
+        weight: 1.5,
+        fillOpacity: 0.85,
+      }).bindPopup(`
+        <div class="popup-title" style="color:#38bdf8">Escuela</div>
+        <div style="font-size:0.72rem;margin:4px 0;">Nivel: <strong>${e.nivel}</strong></div>
+        <div class="popup-sub">${e.lat.toFixed(5)}, ${e.lng.toFixed(5)}</div>
+      `);
+      escuelaLayerGroup.addLayer(m);
+    });
+  },
+  error: function() { console.warn('No se pudo cargar escuelas.csv'); }
+});
+
+document.getElementById('toggleEscuelas').addEventListener('click', function() {
+  this.classList.toggle('on');
+  if (this.classList.contains('on')) map.addLayer(escuelaLayerGroup);
+  else map.removeLayer(escuelaLayerGroup);
+});
+
+
+// ─── CARGA OXXOS ─────────────────────────────────────────────────────
+Papa.parse('oxxos.csv', {
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  complete: function(results) {
+    OXXOS = results.data
+      .map((row, i) => ({
+        id: i + 1,
+        lat: parseFloat(row['latitud']),
+        lng: parseFloat(row['longitud']),
+      }))
+      .filter(o => !isNaN(o.lat) && !isNaN(o.lng));
+
+    OXXOS.forEach(o => {
+      const m = L.circleMarker([o.lat, o.lng], {
+        radius: 5,
+        fillColor: '#f97316',
+        color: '#ea580c',
+        weight: 1.5,
+        fillOpacity: 0.9,
+      }).bindPopup(`
+        <div class="popup-title" style="color:#f97316">Oxxo</div>
+        <div class="popup-sub">${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}</div>
+      `);
+      oxxoLayerGroup.addLayer(m);
+    });
+  },
+  error: function() { console.warn('No se pudo cargar oxxos.csv'); }
+});
+
+document.getElementById('toggleOxxos').addEventListener('click', function() {
+  this.classList.toggle('on');
+  if (this.classList.contains('on')) map.addLayer(oxxoLayerGroup);
+  else map.removeLayer(oxxoLayerGroup);
+});
+
+// ─── SELECCIONAR HOGAR ───────────────────────────────────────────────
+function seleccionarHogar(hogar, marker) {
+  if (lastMarker) lastMarker.setIcon(iconNormal());
+  marker.setIcon(iconSelected());
+  lastMarker = marker;
+  selectedHogar = hogar;
+
+  document.getElementById('selectedInfo').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num" style="font-size:0.85rem;word-break:break-all;">${hogar.id}</div>
+      <div class="stat-lbl">ID del hogar</div>
+    </div>
+    <div style="font-size:0.62rem;color:#555b72;">${hogar.lat.toFixed(5)}, ${hogar.lng.toFixed(5)}</div>
+  `;
+
+  dibujarBuffer();
+}
+
+// ─── DIBUJAR BUFFER ──────────────────────────────────────────────────
+function dibujarBuffer() {
+  if (!selectedHogar) return;
+  if (bufferLayer) map.removeLayer(bufferLayer);
+
+  const punto = turf.point([selectedHogar.lng, selectedHogar.lat]);
+  const buffer = turf.buffer(punto, bufferRadio / 1000, { units: 'kilometers', steps: 64 });
+
+  bufferLayer = L.geoJSON(buffer, {
+    style: {
+      color: '#16a34a', weight: 2,
+      fillColor: '#16a34a', fillOpacity: 0.07,
+      dashArray: '6 4',
+    }
+  }).addTo(map);
+
+  // Hogares dentro del buffer
+  const hogaresDentro = [];
+  HOGARES.forEach(h => {
+    if (h.id === selectedHogar.id) return;
+    const pt = turf.point([h.lng, h.lat]);
+    if (turf.booleanPointInPolygon(pt, buffer)) {
+      const dist = Math.round(turf.distance(punto, pt, { units: 'meters' }));
+      hogaresDentro.push({ ...h, dist });
+    }
+  });
+
+  // Clínicas dentro del buffer
+  const clinicasDentro = [];
+  CLINICAS.forEach(c => {
+    const pt = turf.point([c.lng, c.lat]);
+    if (turf.booleanPointInPolygon(pt, buffer)) {
+      const dist = Math.round(turf.distance(punto, pt, { units: 'meters' }));
+      clinicasDentro.push({ ...c, dist });
+    }
+  });
+
+  // Escuelas dentro del buffer
+  const escuelasDentro = [];
+  ESCUELAS.forEach(e => {
+    const pt = turf.point([e.lng, e.lat]);
+    if (turf.booleanPointInPolygon(pt, buffer)) {
+      const dist = Math.round(turf.distance(punto, pt, { units: 'meters' }));
+      escuelasDentro.push({ ...e, dist });
+    }
+  });
+
+  // Oxxos dentro del buffer
+  const oxxosDentro = [];
+  OXXOS.forEach(o => {
+    const pt = turf.point([o.lng, o.lat]);
+    if (turf.booleanPointInPolygon(pt, buffer)) {
+      const dist = Math.round(turf.distance(punto, pt, { units: 'meters' }));
+      oxxosDentro.push({ ...o, dist });
+    }
+  });
+
+  hogaresDentro.sort((a, b) => a.dist - b.dist);
+  clinicasDentro.sort((a, b) => a.dist - b.dist);
+  escuelasDentro.sort((a, b) => a.dist - b.dist);
+  oxxosDentro.sort((a, b) => a.dist - b.dist);
+
+  actualizarPanel(hogaresDentro, clinicasDentro, escuelasDentro, oxxosDentro);
+}
+
+// ─── ACTUALIZAR PANEL ────────────────────────────────────────────────
+function actualizarPanel(hogares, clinicas, escuelas, oxxos) {
+  const el = document.getElementById('bufferResults');
+
+  if (hogares.length === 0 && clinicas.length === 0 && escuelas.length === 0 && oxxos.length === 0) {
+    el.innerHTML = `<div class="empty-state">Nada en este radio</div>`;
+    return;
+  }
+
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">
+    <div class="stat-card">
+      <div class="stat-num">${hogares.length}</div>
+      <div class="stat-lbl">Hogares</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${clinicas.length}</div>
+      <div class="stat-lbl">Clínicas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${escuelas.length}</div>
+      <div class="stat-lbl">Escuelas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${oxxos.length}</div>
+      <div class="stat-lbl">Oxxos</div>
+    </div>
+  </div>`;
+
+  if (clinicas.length > 0) {
+    html += `<div class="panel-label" style="margin-bottom:6px;">Clínicas cercanas</div>
+    <div class="item-list" style="margin-bottom:12px;">
+      ${clinicas.map(c => `
+        <div class="list-item ${claseNivel(c.nivel)}">
+          <div class="item-name">Nivel ${c.nivel}</div>
+          <div class="item-sub">${c.dist} m</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  if (escuelas.length > 0) {
+    html += `<div class="panel-label" style="margin-bottom:6px;">Escuelas cercanas</div>
+    <div class="item-list" style="margin-bottom:12px;">
+      ${escuelas.map(e => `
+        <div class="list-item" style="border-color:#38bdf8">
+          <div class="item-name">Nivel: ${e.nivel}</div>
+          <div class="item-sub">${e.dist} m</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  if (oxxos.length > 0) {
+    html += `<div class="panel-label" style="margin-bottom:6px;">Oxxos cercanos</div>
+    <div class="item-list" style="margin-bottom:12px;">
+      ${oxxos.map(o => `
+        <div class="list-item" style="border-color:#f97316">
+          <div class="item-name">Oxxo</div>
+          <div class="item-sub">${o.dist} m</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  if (hogares.length > 0) {
+    html += `<div class="panel-label" style="margin-bottom:6px;">Hogares cercanos</div>
+    <div class="item-list">
+      ${hogares.map(h => `
+        <div class="list-item">
+          <div class="item-name">ID: ${h.id}</div>
+          <div class="item-sub">${h.dist} m</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ─── SLIDER ──────────────────────────────────────────────────────────
+document.getElementById('bufferSlider').addEventListener('input', function() {
+  bufferRadio = parseInt(this.value);
+  document.getElementById('bufferVal').textContent = bufferRadio;
+  dibujarBuffer();
+});
+</script>
+</body>
+</html>
